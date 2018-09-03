@@ -1,8 +1,8 @@
 package cmap
 
 import (
-	"sync/atomic"
 	"math"
+	"sync/atomic"
 )
 
 type ConcurrentMap interface {
@@ -42,7 +42,7 @@ func NewConcurrentMap(concurrency int, pairRedistributor PairRedistributor) (Con
 		cmap.segment[i] = newSegment(DEFAULT_BUCKET_NUMBER, pairRedistributor)
 	}
 
-	return nil, nil
+	return cmap, nil
 }
 
 type myConcurrentMap struct {
@@ -83,7 +83,11 @@ func (m *myConcurrentMap) Get(key string) interface{} {
 func (m *myConcurrentMap) Delete(key string) bool {
 	s := m.findSegment(hash(key))
 	if s.Delete(key) {
-		atomic.AddUint64(&m.total, ^uint64(1)+1)
+		// 我觉得 atomic.AddUint64(&m.total, ^uint64(1)+1) 这样
+		// 可能更好理解一些， ^uint64(1) 刚好等于 -1 的反码，
+		// 而负数的反码 +1 就等于负数的补码
+		// 但是 Golang 和书上推荐的处理方式都是下面那样，所以采用了下面那种方式
+		atomic.AddUint64(&m.total, ^uint64(0))
 		return true
 	}
 	return false
@@ -91,13 +95,14 @@ func (m *myConcurrentMap) Delete(key string) bool {
 
 // Len 返回当前字典中键-元素对的数量
 func (m *myConcurrentMap) Len() uint64 {
-	return 0
+	return atomic.LoadUint64(&m.total)
 }
 
 func (m *myConcurrentMap) findSegment(keyHash uint64) Segment {
 	if m.concurrency == 1 {
 		return m.segment[0]
 	}
+	// 书中的源代码是 uint32，最后
 	var keyHash16 uint16
 	if keyHash > math.MaxUint16 {
 		keyHash16 = uint16(keyHash >> 48)
@@ -105,5 +110,8 @@ func (m *myConcurrentMap) findSegment(keyHash uint64) Segment {
 		keyHash16 = uint16(keyHash)
 	}
 
+	// 书中的源代码是 return cmap.segments[int(keyHash32>>16)%(cmap.concurrency-1)]，
+	// 1. 既然最后还是要 keyHash32>>16，为什么不干脆使用一个 uint16 类型的值？
+	// 2. 不太清楚 concurrency 为何要 -1，因为 % concurrency 操作得到的结果就是 [0, concurrency)，不存在越界问题
 	return m.segment[int(keyHash16)%m.concurrency]
 }

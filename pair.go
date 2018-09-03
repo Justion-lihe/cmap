@@ -11,10 +11,23 @@ type linkedPair interface {
 
 type Pair interface {
 	linkedPair
+
+	// Key 返回键的值
+	Key() string
+
+	// Hash 返回键的数列值
 	Hash() uint64
+
+	// Element 返回元素的值
 	Element() interface{}
+
+	// SetElement 设置元素的值
 	SetElement(interface{}) error
+
+	// Copy 生成一个当前键-值元素对的副本并返回
 	Copy() Pair
+
+	// String 返回当前键-值元素对的字符串表示形式
 	String() string
 }
 
@@ -53,6 +66,10 @@ func (p *pair) String() string {
 	return ""
 }
 
+func (p *pair) Key() string {
+	return p.key
+}
+
 func newPair(key string, element interface{}) (Pair, error) {
 	p := &pair{
 		key:  key,
@@ -64,5 +81,3 @@ func newPair(key string, element interface{}) (Pair, error) {
 	p.element = unsafe.Pointer(&element)
 	return nil, nil
 }
-
-

@@ -6,5 +6,6 @@ const (
 )
 
 const (
-	DEFAULT_BUCKET_NUMBER int = 16
+	DEFAULT_BUCKET_NUMBER      int     = 16
+	DEFAULT_BUCKET_LOAD_FACTOR float64 = 0.75
 )
